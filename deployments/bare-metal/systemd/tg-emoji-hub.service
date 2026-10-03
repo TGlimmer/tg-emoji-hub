@@ -1,0 +1,36 @@
+[Unit]
+Description=tg-emoji-hub Go server
+After=network.target mysql.service redis.service
+# mysql.service / redis.service 不存在时不报错，只是不等它们
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=tg-emoji
+Group=tg-emoji
+WorkingDirectory=/opt/tg-emoji-hub
+ExecStart=/opt/tg-emoji-hub/bin/server
+Restart=on-failure
+RestartSec=5
+
+# CONFIG_PATH 告诉 Viper 用哪个配置文件
+Environment=CONFIG_PATH=/opt/tg-emoji-hub/configs/config.yaml
+Environment=TZ=Asia/Shanghai
+
+# 日志走 journald，用 journalctl -u tg-emoji-hub -f 查
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tg-emoji-hub
+
+# 如果想写文件日志，把上面两行注释掉，取消注释这两行：
+# StandardOutput=append:/opt/tg-emoji-hub/logs/server.log
+# StandardError=append:/opt/tg-emoji-hub/logs/server.err
+
+# 基础安全加固：进程只能读写 /opt/tg-emoji-hub，不能乱碰系统目录
+ProtectSystem=strict
+ReadWritePaths=/opt/tg-emoji-hub
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

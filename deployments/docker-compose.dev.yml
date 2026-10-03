@@ -1,0 +1,10 @@
+# 本地开发叠加：把 MySQL 暴露到本机方便 IDE 直连
+# 用法：docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.dev.yml up -d
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:3306:3306"
+
+  crawler:
+    environment:
+      LOG_LEVEL: DEBUG

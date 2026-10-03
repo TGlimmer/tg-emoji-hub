@@ -1,0 +1,27 @@
+FROM golang:1.26-alpine AS builder
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/server ./cmd/server
+
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata wget
+
+RUN addgroup -g 1000 app && adduser -u 1000 -G app -D app
+
+COPY --from=builder /out/server /app/server
+COPY deployments/server-entrypoint.sh /usr/local/bin/server-entrypoint.sh
+# Windows 检出的 CRLF 会让 sh 报 "not found"，统一剥掉
+RUN sed -i 's/\r$//' /usr/local/bin/server-entrypoint.sh \
+    && chmod +x /usr/local/bin/server-entrypoint.sh \
+    && mkdir -p /var/signals /var/thumbnails /var/media \
+    && chown -R app:app /var/signals /var/thumbnails /var/media /app
+
+WORKDIR /app
+
+EXPOSE 8080
+USER app
+ENTRYPOINT ["server-entrypoint.sh"]

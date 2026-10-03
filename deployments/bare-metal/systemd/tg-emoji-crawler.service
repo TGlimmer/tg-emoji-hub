@@ -1,0 +1,34 @@
+[Unit]
+Description=tg-emoji-hub Crawler (Python watch mode)
+After=network.target mysql.service tg-emoji-hub.service
+# crawler 依赖 Go server 已创建 var/signals/ 目录，稍晚启动没问题
+Wants=mysql.service tg-emoji-hub.service
+
+[Service]
+Type=simple
+User=tg-emoji
+Group=tg-emoji
+WorkingDirectory=/opt/tg-emoji-hub/crawler
+ExecStart=/opt/tg-emoji-hub/crawler/.venv/bin/python /opt/tg-emoji-hub/crawler/crawler.py watch
+Restart=on-failure
+RestartSec=10
+
+Environment=TZ=Asia/Shanghai
+
+# 日志走 journald，用 journalctl -u tg-emoji-crawler -f 查
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tg-emoji-crawler
+
+# 如果想写文件日志，注释上面两行，取消注释：
+# StandardOutput=append:/opt/tg-emoji-hub/logs/crawler.log
+# StandardError=append:/opt/tg-emoji-hub/logs/crawler.err
+
+# crawler 需要读写 signals/、media/、thumbs/ 以及 .session/
+ProtectSystem=strict
+ReadWritePaths=/opt/tg-emoji-hub
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

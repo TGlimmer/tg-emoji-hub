@@ -1,0 +1,33 @@
+# tg-emoji-hub 服务器侧配置模板
+# 复制本文件为 config.yaml，按注释填写服务器实际值
+# 路径：/opt/tg-emoji-hub/configs/config.yaml
+
+server:
+  port: 8080
+  # 改成你的实际域名（含 https://），HTTP 和 MCP 返回的 thumbnail_url / media_url 用它拼绝对地址
+  base_url: "https://__DOMAIN__"
+  # prod 模式关掉 AutoMigrate（表结构由 dump.sql 导入维护）
+  mode: prod
+
+database:
+  host: localhost     # 服务器本地 MySQL，通常 localhost 或 127.0.0.1
+  port: 3306
+  user: tgemoji       # 数据库账号
+  # 服务器上这个 MySQL 账号的密码（建账号时 IDENTIFIED BY 填的那个），不要求和本地一致
+  password: "change-me"
+  name: tg_emoji_hub
+
+log:
+  level: info     # prod 环境用 info，调试时改 debug
+  format: json    # prod 环境用 json，方便日志系统（ELK/Loki）采集
+
+mcp:
+  enabled: true
+  path: /mcp    # 必须和 Nginx /mcp location 对齐
+
+paths:
+  # 媒体文件的绝对路径，和 Nginx alias 保持一致
+  media_dir: /opt/tg-emoji-hub/media/emoji
+  thumbnail_dir: /opt/tg-emoji-hub/media/thumbs
+  # signals 目录：crawler 和 server 通信用（服务器通常不跑 crawler，留着无害）
+  signals_dir: /opt/tg-emoji-hub/var/signals

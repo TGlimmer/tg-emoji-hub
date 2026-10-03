@@ -1,0 +1,24 @@
+server:
+  port: 8080
+  base_url: "http://localhost:8080"
+  mode: dev   # dev / prod，dev 启用 AutoMigrate
+
+database:
+  host: localhost
+  port: 3306
+  user: tgemoji
+  password: change-me
+  name: tg_emoji_hub
+
+log:
+  level: info       # debug / info / warn / error
+  format: console   # console / json
+
+mcp:
+  enabled: true
+  path: /mcp     # Streamable HTTP 挂载路径（旧名 sse_path 已废弃）
+
+paths:
+  signals_dir: ./var/signals
+  thumbnail_dir: ./web/public/thumbs
+  media_dir: ./web/public/emoji

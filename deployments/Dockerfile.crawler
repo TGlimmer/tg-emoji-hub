@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+WORKDIR /app
+
+COPY crawler/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY crawler/ ./
+
+RUN groupadd -g 1000 app && useradd -u 1000 -g app -M -s /usr/sbin/nologin app \
+    && mkdir -p /var/signals /var/thumbnails /var/media /app/.session \
+    && chown -R app:app /var/signals /var/thumbnails /var/media /app
+
+ENV PYTHONUNBUFFERED=1
+USER app
+
+ENTRYPOINT ["python", "crawler.py"]
+CMD ["watch"]

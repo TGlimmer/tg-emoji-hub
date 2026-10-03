@@ -1,0 +1,106 @@
+# 用法见 Makefile：make up（mysql + server + web）；make crawler-up 另起爬虫
+# 所有配置来自 deployments/.env（复制 .env.example），不需要再写 config.yaml / crawler/.env
+name: tg-emoji-hub
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: tg_emoji_hub
+      MYSQL_USER: tgemoji
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?在 deployments/.env 里设置 MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?在 deployments/.env 里设置 MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../migrations:/migrations:ro
+      # 只在数据目录为空的首次启动时执行
+      - ./mysql-init/10-migrate.sh:/docker-entrypoint-initdb.d/10-migrate.sh:ro
+    healthcheck:
+      # 必须走 TCP：初始化阶段的临时 mysqld 只开 socket，-h localhost 会在初始化没跑完时就报健康
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  server:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?在 deployments/.env 里设置 MYSQL_PASSWORD}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      # server 写 .pending 信号，crawler 读并清理
+      - signals:/var/signals
+      - thumbs:/var/thumbnails
+      - media:/var/media
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # 默认不启动：没有 Telegram 凭据和 session 它只会崩溃重启。make crawler-login 登录后再 make crawler-up
+  crawler:
+    profiles: ["crawler"]
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.crawler
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TG_API_ID: ${TG_API_ID:-}
+      TG_API_HASH: ${TG_API_HASH:-}
+      TG_PHONE: ${TG_PHONE:-}
+      TG_SESSION_NAME: tg-emoji-hub
+      DB_DSN: mysql+pymysql://tgemoji:${MYSQL_PASSWORD:?在 deployments/.env 里设置 MYSQL_PASSWORD}@mysql:3306/tg_emoji_hub?charset=utf8mb4
+      CRAWLER_SIGNALS_DIR: /var/signals
+      THUMBNAIL_DIR: /var/thumbnails
+      MEDIA_DIR: /var/media
+      SESSION_DIR: /app/.session
+      DOWNLOAD_ORIGINALS: ${DOWNLOAD_ORIGINALS:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ZAI_API_KEY: ${ZAI_API_KEY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+    volumes:
+      - signals:/var/signals
+      - thumbs:/var/thumbnails
+      - media:/var/media
+      # Telethon .session 文件，跨重启保留，丢了要重新登录
+      - tg_session:/app/.session
+
+volumes:
+  mysql_data:
+  signals:
+  thumbs:
+  media:
+  tg_session:

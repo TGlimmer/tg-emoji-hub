@@ -1,0 +1,74 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+vendor/
+
+# Build artifacts (注意：必须用 /server 限定根目录，否则会误伤 cmd/server/ 目录)
+/server
+/server.exe
+/crawler-bin
+/web/dist/
+/web/node_modules/
+/web/.vite/
+
+# Config & secrets
+configs/config.yaml
+crawler/.env
+crawler/.env.*
+*.session
+*.session-journal
+.env
+.env.*
+!.env.example
+!*.env.example
+
+# Logs
+*.log
+logs/
+var/
+
+# Crawler 本地缓存：缩略图 + emoji 原文件 (开发机本地；生产用 volume 挂载)
+/web/public/thumbs/
+/web/public/emoji/
+/crawler/data/
+/var/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Test coverage
+*.coverprofile
+coverage.html
+coverage.out
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+desktop.ini
+
+# 打包产物 / TS 增量构建缓存
+*.zip
+*.tsbuildinfo
+/crawler/.session/
+/server-linux
